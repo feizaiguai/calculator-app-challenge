@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧮 高级计算器 — AI In Action Challenge</title>
+    <meta name="description" content="一款支持科学计算、历史记录和键盘操作的现代化计算器应用">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a1a;
+            color: #e0e0ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        .app-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .calculator {
+            width: 380px;
+            background: rgba(15, 15, 35, 0.9);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 28px;
+            padding: 1.8rem;
+            box-shadow:
+                0 25px 60px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(99, 102, 241, 0.05);
+        }
+
+        .display {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 18px;
+            padding: 1.5rem;
+            margin-bottom: 1.2rem;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+
+        .expression {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.4);
+            min-height: 1.2em;
+            word-break: break-all;
+            text-align: right;
+        }
+
+        .result {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+            word-break: break-all;
+            text-align: right;
+            transition: font-size 0.2s;
+        }
+
+        .result.small { font-size: 1.8rem; }
+
+        .mode-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .mode-tab.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .btn {
+            height: 60px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .btn:active { transform: scale(0.94); }
+
+        .btn-num {
+            background: rgba(255, 255, 255, 0.06);
+            color: #e0e0ff;
+        }
+        .btn-num:hover { background: rgba(255, 255, 255, 0.12); }
+
+        .btn-op {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+        .btn-op:hover { background: rgba(99, 102, 241, 0.3); }
+
+        .btn-fn {
+            background: rgba(236, 72, 153, 0.1);
+            color: #f9a8d4;
+            border-color: rgba(236, 72, 153, 0.15);
+            font-size: 0.85rem;
+        }
+        .btn-fn:hover { background: rgba(236, 72, 153, 0.2); }
+
+        .btn-clear {
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        .btn-clear:hover { background: rgba(239, 68, 68, 0.25); }
+
+        .btn-eq {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(139, 92, 246, 0.6));
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border: none;
+        }
+        .btn-eq:hover { background: linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(139, 92, 246, 0.8)); }
+
+        .btn-wide { grid-column: span 2; }
+
+        .sci-buttons {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .sci-buttons.active { display: grid; }
+
+        /* 历史面板 */
+        .history-panel {
+            width: 260px;
+            max-height: 540px;
+            background: rgba(15, 15, 35, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            border-radius: 20px;
+            padding: 1.2rem;
+            overflow-y: auto;
+        }
+
+        .history-panel h3 {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+        }
+
+        .history-item {
+            padding: 0.7rem;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover { background: rgba(99, 102, 241, 0.1); }
+
+        .history-expr {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .history-result {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: #a5b4fc;
+        }
+
+        .history-empty {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .clear-history {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            color: rgba(239, 68, 68, 0.5);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-history:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .footer a { color: #6366f1; text-decoration: none; }
+
+        /* 按键动画 */
+        @keyframes press {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.92); }
+            100% { transform: scale(1); }
+        }
+
+        .btn.pressed { animation: press 0.15s ease; }
+
+        /* 滚动条 */
+        .history-panel::-webkit-scrollbar { width: 4px; }
+        .history-panel::-webkit-scrollbar-track { background: transparent; }
+        .history-panel::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 2px; }
+
+        @media (max-width: 700px) {
+            .app-wrapper { flex-direction: column; align-items: center; }
+            .history-panel { width: 380px; max-height: 200px; }
+            .calculator { width: 340px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <div class="calculator">
+            <div class="display">
+                <div class="expression" id="expression"></div>
+                <div class="result" id="result">0</div>
+            </div>
+
+            <div class="mode-tabs">
+                <button class="mode-tab active" id="tabBasic" onclick="switchMode('basic')">基本</button>
+                <button class="mode-tab" id="tabSci" onclick="switchMode('sci')">科学</button>
+            </div>
+
+            <div class="sci-buttons" id="sciButtons">
+                <button class="btn btn-fn" onclick="input('sin(')">sin</button>
+                <button class="btn btn-fn" onclick="input('cos(')">cos</button>
+                <button class="btn btn-fn" onclick="input('tan(')">tan</button>
+                <button class="btn btn-fn" onclick="input('Math.PI')">π</button>
+                <button class="btn btn-fn" onclick="input('Math.sqrt(')">√</button>
+                <button class="btn btn-fn" onclick="input('**2')">x²</button>
+                <button class="btn btn-fn" onclick="input('Math.log(')">ln</button>
+                <button class="btn btn-fn" onclick="input('Math.E')">e</button>
+                <button class="btn btn-fn" onclick="input('Math.abs(')">|x|</button>
+                <button class="btn btn-fn" onclick="input('**')">xʸ</button>
+                <button class="btn btn-fn" onclick="input('(')">（</button>
+                <button class="btn btn-fn" onclick="input(')')">）</button>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-clear" onclick="clearAll()" id="btnAC">AC</button>
+                <button class="btn btn-clear" onclick="backspace()">⌫</button>
+                <button class="btn btn-op" onclick="input('%')">%</button>
+                <button class="btn btn-op" onclick="input('/')">÷</button>
+
+                <button class="btn btn-num" onclick="input('7')">7</button>
+                <button class="btn btn-num" onclick="input('8')">8</button>
+                <button class="btn btn-num" onclick="input('9')">9</button>
+                <button class="btn btn-op" onclick="input('*')">×</button>
+
+                <button class="btn btn-num" onclick="input('4')">4</button>
+                <button class="btn btn-num" onclick="input('5')">5</button>
+                <button class="btn btn-num" onclick="input('6')">6</button>
+                <button class="btn btn-op" onclick="input('-')">−</button>
+
+                <button class="btn btn-num" onclick="input('1')">1</button>
+                <button class="btn btn-num" onclick="input('2')">2</button>
+                <button class="btn btn-num" onclick="input('3')">3</button>
+                <button class="btn btn-op" onclick="input('+')">+</button>
+
+                <button class="btn btn-num" onclick="toggleSign()">±</button>
+                <button class="btn btn-num" onclick="input('0')">0</button>
+                <button class="btn btn-num" onclick="input('.')">.</button>
+                <button class="btn btn-eq" onclick="calculate()">=</button>
+            </div>
+
+            <div class="footer">
+                Made with 💜 by <a href="https://github.com/feizaiguai" target="_blank">Dao Agent</a>
+                · AI In Action Challenge
+            </div>
+        </div>
+
+        <div class="history-panel">
+            <h3>📜 计算历史</h3>
+            <div id="historyList">
+                <div class="history-empty">暂无记录</div>
+            </div>
+            <button class="clear-history" onclick="clearHistory()">清空历史</button>
+        </div>
+    </div>
+
+    <script>
+        let expr = '';
+        let lastResult = '';
+        let history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+        let mode = 'basic';
+
+        const elExpr = document.getElementById('expression');
+        const elResult = document.getElementById('result');
+
+        renderHistory();
+
+        function input(val) {
+            // 如果刚算完且输入数字, 重新开始
+            if (lastResult && !isNaN(val) && val !== '.') {
+                expr = '';
+                lastResult = '';
+            }
+            expr += val;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            // 格式化显示
+            let display = expr
+                .replace(/\*/g, '×')
+                .replace(/\//g, '÷')
+                .replace(/Math\.PI/g, 'π')
+                .replace(/Math\.E/g, 'e')
+                .replace(/Math\.sqrt\(/g, '√(')
+                .replace(/Math\.log\(/g, 'ln(')
+                .replace(/Math\.abs\(/g, '|')
+                .replace(/\*\*2/g, '²')
+                .replace(/\*\*/g, '^');
+
+            elExpr.textContent = display || '';
+            
+            // 实时预览计算结果
+            try {
+                const safeExpr = expr
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(');
+                const preview = Function('"use strict"; return (' + safeExpr + ')')();
+                if (typeof preview === 'number' && isFinite(preview)) {
+                    elResult.textContent = formatNumber(preview);
+                    elResult.classList.toggle('small', String(preview).length > 12);
+                }
+            } catch(e) {
+                // 表达式不完整,保持当前显示
+            }
+        }
+
+        function calculate() {
+            if (!expr) return;
+            try {
+                const safeExpr = expr
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(');
+                let result = Function('"use strict"; return (' + safeExpr + ')')();
+                
+                if (typeof result !== 'number' || !isFinite(result)) {
+                    elResult.textContent = '错误';
+                    return;
+                }
+
+                const displayExpr = expr
+                    .replace(/\*/g, '×')
+                    .replace(/\//g, '÷')
+                    .replace(/Math\.PI/g, 'π')
+                    .replace(/Math\.E/g, 'e');
+
+                const formatted = formatNumber(result);
+                
+                // 添加到历史
+                history.unshift({ expr: displayExpr, result: formatted });
+                if (history.length > 50) history.pop();
+                localStorage.setItem('calcHistory', JSON.stringify(history));
+                renderHistory();
+
+                elExpr.textContent = displayExpr + ' =';
+                elResult.textContent = formatted;
+                elResult.classList.toggle('small', formatted.length > 12);
+                
+                expr = String(result);
+                lastResult = formatted;
+            } catch(e) {
+                elResult.textContent = '表达式错误';
+            }
+        }
+
+        function formatNumber(n) {
+            if (Number.isInteger(n)) return n.toLocaleString('zh-CN');
+            // 保留最多 10 位小数，去尾零
+            return parseFloat(n.toFixed(10)).toLocaleString('zh-CN', { maximumFractionDigits: 10 });
+        }
+
+        function clearAll() {
+            expr = '';
+            lastResult = '';
+            elExpr.textContent = '';
+            elResult.textContent = '0';
+            elResult.classList.remove('small');
+        }
+
+        function backspace() {
+            // 处理特殊函数回退
+            const fns = ['Math.PI', 'Math.E', 'Math.sqrt(', 'Math.log(', 'Math.abs(', 'sin(', 'cos(', 'tan(', '**2', '**'];
+            for (const fn of fns) {
+                if (expr.endsWith(fn)) {
+                    expr = expr.slice(0, -fn.length);
+                    updateDisplay();
+                    return;
+                }
+            }
+            expr = expr.slice(0, -1);
+            updateDisplay();
+            if (!expr) {
+                elResult.textContent = '0';
+                elResult.classList.remove('small');
+            }
+        }
+
+        function toggleSign() {
+            if (!expr) return;
+            // 简单取反处理
+            if (expr.startsWith('-')) {
+                expr = expr.substring(1);
+            } else {
+                expr = '-' + expr;
+            }
+            updateDisplay();
+        }
+
+        function switchMode(m) {
+            mode = m;
+            document.getElementById('tabBasic').classList.toggle('active', m === 'basic');
+            document.getElementById('tabSci').classList.toggle('active', m === 'sci');
+            document.getElementById('sciButtons').classList.toggle('active', m === 'sci');
+        }
+
+        function renderHistory() {
+            const el = document.getElementById('historyList');
+            if (history.length === 0) {
+                el.innerHTML = '<div class="history-empty">暂无记录</div>';
+                return;
+            }
+            el.innerHTML = history.map((h, i) => `
+                <div class="history-item" onclick="useHistory(${i})">
+                    <div class="history-expr">${escapeHtml(h.expr)}</div>
+                    <div class="history-result">= ${escapeHtml(h.result)}</div>
+                </div>
+            `).join('');
+        }
+
+        function useHistory(i) {
+            const h = history[i];
+            // 将结果作为当前输入
+            expr = h.result.replace(/,/g, '');
+            lastResult = '';
+            updateDisplay();
+        }
+
+        function clearHistory() {
+            history = [];
+            localStorage.removeItem('calcHistory');
+            renderHistory();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // 键盘支持
+        document.addEventListener('keydown', e => {
+            const key = e.key;
+            if (/^\d$/.test(key)) { input(key); animate(key); }
+            else if (key === '+' || key === '-') { input(key); animate(key); }
+            else if (key === '*') { input('*'); animate('×'); }
+            else if (key === '/') { input('/'); animate('÷'); e.preventDefault(); }
+            else if (key === '.') { input('.'); animate('.'); }
+            else if (key === '%') { input('%'); animate('%'); }
+            else if (key === '(' || key === ')') { input(key); }
+            else if (key === 'Enter' || key === '=') { calculate(); animate('='); e.preventDefault(); }
+            else if (key === 'Backspace') { backspace(); animate('⌫'); }
+            else if (key === 'Escape') { clearAll(); animate('AC'); }
+        });
+
+        function animate(label) {
+            const btns = document.querySelectorAll('.btn');
+            btns.forEach(b => {
+                if (b.textContent.trim() === label) {
+                    b.classList.add('pressed');
+                    setTimeout(() => b.classList.remove('pressed'), 150);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
